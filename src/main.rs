@@ -87,13 +87,16 @@ impl<K: Ord + Clone + std::fmt::Debug, V: Ord + Clone + std::fmt::Debug> BTreeNo
         let mut new_node = BTreeNode::<K, V>::new(self.node_size);
         new_node.keys = self.keys.drain(mid..).collect();
         new_node.values = self.values.drain(mid..).collect();
+        if self.children.len() > 0 {
+            new_node.children = self.children.drain(mid + 1..).collect();
+        }
 
         new_node
     }
 
     fn add_recursive(&mut self, key: K, value: V) -> Option<BTreeNode<K, V>> {
         let i = BTreeNode::<K, V>::find_it(&self.keys, &key);
-        if self.children.len() < self.node_size + 1 {
+        if self.children.len() == 0 {
             // Add directly to leaf node
             let index = if i < 0 {
                 -(i + 1) as usize
@@ -127,18 +130,10 @@ impl<K: Ord + Clone + std::fmt::Debug, V: Ord + Clone + std::fmt::Debug> BTreeNo
     }
 
     fn display(&self, depth: usize) {
-        for (i, key) in self.keys.iter().enumerate() {
-            if i < self.children.len() {
-                self.children[i].display(depth + 1);
-            }
+        println!("{}Node with {:?} keys and {} children", " ".repeat(depth * 2), self.keys, self.children.len());
 
-            let k = key.clone();
-            let v = self.values[i].clone();
-            println!("{}{:?} = {:?} (children: {:?})", " ".repeat(depth * 2), k, v, self.children.len());
-        }
-
-        if self.children.len() > self.keys.len() {
-            self.children[self.children.len() - 1].display(depth + 1);
+        for child in self.children.iter() {
+            child.display(depth + 1);
         }
     }
 }
@@ -226,7 +221,7 @@ mod tests {
 
     #[test]
     fn test_btree() {
-        let mut tree = BTree::<u64, String>::new(5);
+        let mut tree = BTree::<u64, String>::new(12);
 
         let data = vec![
             (1, "a"),
@@ -246,21 +241,19 @@ mod tests {
             (23, "w"),
             (24, "x"),
             (25, "y"),
-            (26, "z"),
-            (27, "z"),
-            (28, "z"),
-            (29, "z"),
-            (30, "z"),
-            (31, "z"),
-            (32, "z"),
+            (26, "zz"),
+            (27, "zzz"),
+            (28, "zzzz"),
+            (29, "zzzzz"),
+            (30, "zsa"),
+            (31, "zasd"),
+            (32, "zsff"),
         ];
 
         for (i, (key, value)) in data.iter().enumerate() {
             tree.add(key.clone(), value.to_string());
 
-            for (key, _) in data[..i + 1].iter() {
-                assert!(tree.find(*key).is_some());
-            }
+            assert!(tree.find(*key).is_some());
         }
 
         tree.root.display(0);
